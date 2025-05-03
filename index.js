@@ -85,7 +85,9 @@ client.on('interactionCreate', async interaction => {
 
     // Effectue le spin
     const weightedEmojis = [
+      // 🍪 x11 → P(🍪)=11/20≈0.55 → P(3×🍪)≈(0.55)^3≈0.166≈1/6
       ...Array(11).fill('🍪'),
+      // Répartition des 9 restantes
       ...Array(2).fill('🍫'),
       ...Array(2).fill('🍩'),
       ...Array(2).fill('🎁'),
@@ -94,6 +96,7 @@ client.on('interactionCreate', async interaction => {
     const spin = () => weightedEmojis[
       Math.floor(Math.random() * weightedEmojis.length)
     ];
+    const grid = [spin(), spin(), spin()];
 
     // Calcule le gain
     let gain = 0;
