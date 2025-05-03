@@ -1,9 +1,11 @@
+// commands/daily.js
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
-const COOKIES_PATH = path.join(__dirname, '../../data/cookies.json');
-const COOLDOWN_PATH = path.join(__dirname, '../../data/cooldowns.json');
+const COOKIES_PATH   = path.join(__dirname, '../../data/cookies.json');
+const COOLDOWN_PATH  = path.join(__dirname, '../../data/cooldowns.json');
+const POWERUPS_PATH  = path.join(__dirname, '../../data/powerups.json');
 const COOLDOWN_HOURS = 24;
 
 module.exports = {
@@ -14,41 +16,58 @@ module.exports = {
   async execute(interaction) {
     const userId = interaction.user.id;
 
-    let cookies = {};
+    // 1) Charger les fichiers
+    let cookies   = {};
     let cooldowns = {};
+    let powerups  = {};
+    try { cookies   = JSON.parse(fs.readFileSync(COOKIES_PATH));   } catch {}
+    try { cooldowns = JSON.parse(fs.readFileSync(COOLDOWN_PATH));  } catch {}
+    try { powerups  = JSON.parse(fs.readFileSync(POWERUPS_PATH));  } catch {}
 
-    // Chargement des fichiers
-    try {
-      cookies = JSON.parse(fs.readFileSync(COOKIES_PATH));
-    } catch {}
-    try {
-      cooldowns = JSON.parse(fs.readFileSync(COOLDOWN_PATH));
-    } catch {}
-
-    const now = Date.now();
+    const now       = Date.now();
     const lastClaim = cooldowns[userId] ?? 0;
-    const diffHours = (now - lastClaim) / (1000 * 60 * 60);
+    const hoursDiff = (now - lastClaim) / 3_600_000;
 
-    if (diffHours < COOLDOWN_HOURS) {
-      const remaining = Math.ceil(COOLDOWN_HOURS - diffHours);
+    // 2) Vérifier le cooldown
+    if (hoursDiff < COOLDOWN_HOURS) {
+      const rem = Math.ceil(COOLDOWN_HOURS - hoursDiff);
       return interaction.reply({
-        content: `⏳ Tu as déjà récupéré ton bonus aujourd’hui.\nRéessaie dans **${remaining}h**.`,
+        content: `⏳ Tu as déjà récupéré ton bonus aujourd’hui.\nRéessaie dans **${rem}h**.`,
         ephemeral: true
       });
     }
 
-    // Donne un bonus aléatoire
-    const bonus = Math.floor(Math.random() * 11) + 10; // 10 à 20 cookies
-    cookies[userId] = (cookies[userId] ?? 0) + bonus;
-    cooldowns[userId] = now;
+    // 3) Calcul du bonus de base
+    let bonus = Math.floor(Math.random() * 11) + 10; // 10–20 cookies
 
-    // Sauvegarde
-    fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
+    // 4) Gestion des power-ups
+    const userPus = Array.isArray(powerups[userId]) ? powerups[userId] : [];
+
+    // Filtrer et nettoyer les expirés
+    const validPus = userPus.filter(p => !p.expiresAt || p.expiresAt > now);
+    powerups[userId] = validPus;
+    fs.writeFileSync(POWERUPS_PATH, JSON.stringify(powerups, null, 2));
+
+    // Appliquer daily_multiplier s’il existe
+    const dailyMul = validPus.find(p => p.id === 'daily_multiplier');
+    if (dailyMul) {
+      bonus *= 2;
+    }
+
+    // 5) Appliquer et sauvegarder
+    cookies[userId]   = (cookies[userId] ?? 0) + bonus;
+    cooldowns[userId] = now;
+    fs.writeFileSync(COOKIES_PATH,  JSON.stringify(cookies, null, 2));
     fs.writeFileSync(COOLDOWN_PATH, JSON.stringify(cooldowns, null, 2));
 
+    // 6) Réponse
     const embed = new EmbedBuilder()
       .setTitle('🎁 Bonus quotidien')
-      .setDescription(`Tu as reçu **${bonus} cookies** !\n💰 Solde actuel : **${cookies[userId]}** cookies`)
+      .setDescription(
+        `Tu as reçu **${bonus} cookies** !` +
+        (dailyMul ? `\n(×2 grâce à ton **Multiplicateur /daily**)` : '') +
+        `\n💰 Solde actuel : **${cookies[userId]}** cookies`
+      )
       .setColor('#FFD700');
 
     await interaction.reply({ embeds: [embed] });

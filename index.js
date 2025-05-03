@@ -14,20 +14,9 @@ require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
 
-const COOKIE_COST = 5;
-const COOKIES_PATH = path.join(__dirname, 'data/cookies.json');
-
-// Calcule le total d'une main en gérant les As (11 ou 1)
-function getHandValue(cards) {
-  let total = cards.reduce((sum, v) => sum + v, 0);
-  let aces = cards.filter(v => v === 11).length;
-  // Tant que ça bust et qu'il y a un As, on revalorise un As à 1 (-10)
-  while (total > 21 && aces > 0) {
-    total -= 10;
-    aces--;
-  }
-  return total;
-}
+const COOKIE_COST    = 5;
+const COOKIES_PATH   = path.join(__dirname, 'data/cookies.json');
+const POWERUPS_PATH  = path.join(__dirname, 'data/powerups.json');
 
 const client = new Client({
   intents: [
@@ -58,13 +47,15 @@ client.once('ready', () => {
 // ─── Messages texte ────────────────────────────────────
 client.on('messageCreate', message => {
   if (message.author.bot) return;
-  if (message.content === '!ping') return message.reply('pong !');
+  if (message.content === '!ping') {
+    return message.reply('pong !');
+  }
   if (message.content.toLowerCase().includes('cookie')) {
     return message.react('1230057572854272080');
   }
 });
 
-// ─── Interactions (slash, buttons, select menus) ───────
+// ─── Interactions ──────────────────────────────────────
 client.on('interactionCreate', async interaction => {
   // 1) Slash commands
   if (interaction.isChatInputCommand()) {
@@ -78,7 +69,7 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // 2) Machine à sous (button spin_)
+  // 2) Machine à sous (bouton spin_)
   if (interaction.isButton() && interaction.customId.startsWith('spin_')) {
     const [ , userId ] = interaction.customId.split('_');
     if (interaction.user.id !== userId) {
@@ -101,8 +92,7 @@ client.on('interactionCreate', async interaction => {
       ...Array(2).fill('🎁'),
       ...Array(3).fill('💣'),
     ];
-    const spin = () =>
-      weightedEmojis[Math.floor(Math.random() * weightedEmojis.length)];
+    const spin = () => weightedEmojis[Math.floor(Math.random() * weightedEmojis.length)];
     const grid = [spin(), spin(), spin()];
 
     let gain = 0;
@@ -137,33 +127,27 @@ client.on('interactionCreate', async interaction => {
   ) {
     await interaction.deferReply({ ephemeral: true });
     try {
-      const shop = JSON.parse(fs.readFileSync('./data/shop.json', 'utf-8'));
+      const shop = JSON.parse(fs.readFileSync(path.join(__dirname, 'data/shop.json'), 'utf-8'));
       const itemId = interaction.values[0];
       const item = shop.find(i => i.id === itemId);
       if (!item) throw new Error('Item introuvable.');
 
-      const cookiesPath = './data/cookies.json';
-      const cookies = fs.existsSync(cookiesPath)
-        ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
+      // Charge solde et power-ups
+      const cookies  = fs.existsSync(COOKIES_PATH)
+        ? JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'))
         : {};
-      const uid = interaction.user.id;
+      const powerups = fs.existsSync(POWERUPS_PATH)
+        ? JSON.parse(fs.readFileSync(POWERUPS_PATH, 'utf-8'))
+        : {};
+      const uid     = interaction.user.id;
       const balance = cookies[uid] ?? 0;
+
       if (balance < item.price) {
         return interaction.editReply({ content: '❌ Solde insuffisant.', ephemeral: true });
       }
 
+      // Retirer le prix
       cookies[uid] = balance - item.price;
-      fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
-
-      const savePowerup = (userId, pid) => {
-        const puPath = './data/powerups.json';
-        const pu = fs.existsSync(puPath) ? JSON.parse(fs.readFileSync(puPath)) : {};
-        if (!pu[userId]) pu[userId] = [];
-        if (!pu[userId].includes(pid)) {
-          pu[userId].push(pid);
-          fs.writeFileSync(puPath, JSON.stringify(pu, null, 2));
-        }
-      };
 
       let msg;
       switch (item.type) {
@@ -171,33 +155,49 @@ client.on('interactionCreate', async interaction => {
           await interaction.member.roles.add(item.roleId);
           msg = `✅ Tu as reçu le rôle **${item.name}** !`;
           break;
+
         case 'emoji':
           msg = `✅ Tu as acheté **${item.name}** !\n👉 Envoie-moi maintenant l’emoji que tu souhaites ajouter au serveur.`;
           break;
+
         case 'permission':
-          savePowerup(uid, item.id);
+          if (!powerups[uid]) powerups[uid] = [];
+          powerups[uid].push({ id: item.id });
           msg = `✅ Tu peux désormais utiliser **/${item.permission}** !`;
           break;
+
         case 'mystery':
           const gainMyst = Math.floor(Math.random() * 101);
           cookies[uid] += gainMyst;
-          fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
           msg = `🎁 Mystery Box : tu obtiens **${gainMyst}** cookies !`;
           break;
+
         case 'multiplier':
-        case 'passive':
-          savePowerup(uid, item.id);
-          msg = `✅ Item **${item.name}** ajouté à tes power-ups !`;
+          const now = Date.now();
+          const expiresAt = now + item.durationHours * 3_600_000;
+          if (!powerups[uid]) powerups[uid] = [];
+          powerups[uid].push({ id: item.id, expiresAt });
+          msg = `✅ **${item.name}** ajouté (×${item.multiplier} pendant ${item.durationHours}h, jusqu’à <t:${Math.floor(expiresAt/1000)}:F>) !`;
           break;
+
+        case 'passive':
+          if (!powerups[uid]) powerups[uid] = [];
+          powerups[uid].push({ id: item.id });
+          msg = `✅ **${item.name}** ajouté à tes power-ups !`;
+          break;
+
         default:
           msg = '✓ Achat effectué !';
       }
+
+      // Sauvegarde
+      fs.writeFileSync(COOKIES_PATH,  JSON.stringify(cookies,  null, 2));
+      fs.writeFileSync(POWERUPS_PATH, JSON.stringify(powerups, null, 2));
 
       const embed = new EmbedBuilder()
         .setTitle('🛒 Achat réussi')
         .setDescription(`${msg}\n💰 Nouveau solde : **${cookies[uid]}** cookies`)
         .setColor('#00cc66');
-
       return interaction.editReply({ embeds: [embed] });
     } catch (err) {
       console.error('Erreur shop_select:', err);
@@ -226,15 +226,12 @@ client.on('interactionCreate', async interaction => {
 
       const card = Math.floor(Math.random() * 10) + 2;
       player.push(card);
-      const total = getHandValue(player);
+      const total = player.reduce((a,b) => a + b, 0);
 
       if (total > 21) {
         const embed = new EmbedBuilder()
           .setTitle('💥 Perdu !')
-          .setDescription(
-            `Tu as tiré **${card}**.\n` +
-            `🃙 Tes cartes : ${player.join(', ')} (total: ${total})`
-          )
+          .setDescription(`Tu as tiré **${card}** et dépassé 21.\n🃙 Tes cartes : ${player.join(', ')} (total: ${total})`)
           .setColor('#cc0000');
         return interaction.update({ embeds: [embed], components: [] });
       }
@@ -268,12 +265,12 @@ client.on('interactionCreate', async interaction => {
       const player = rest.slice(0, -2).map(n => parseInt(n, 10));
       const bot    = rest.slice(-2).map(n => parseInt(n, 10));
 
-      while (getHandValue(bot) < 17) {
+      while (bot.reduce((a,b) => a + b, 0) < 17) {
         bot.push(Math.floor(Math.random() * 10) + 2);
       }
 
-      const totalP = getHandValue(player);
-      const totalB = getHandValue(bot);
+      const totalP = player.reduce((a,b) => a + b, 0);
+      const totalB = bot.reduce((a,b) => a + b, 0);
       const bet    = parseInt(mise, 10);
       let result = '';
       let net    = 0;
@@ -292,13 +289,13 @@ client.on('interactionCreate', async interaction => {
         net = 0;
       }
 
-      const cookiesPath = './data/cookies.json';
-      const cookies = fs.existsSync(cookiesPath)
+      const cookiesPath = COOKIES_PATH;
+      const cookiesData = fs.existsSync(cookiesPath)
         ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
         : {};
-      const current = cookies[userId] ?? 0; // déjà solde - mise
-      cookies[userId] = current + net;
-      fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
+      const current = cookiesData[userId] ?? 0;
+      cookiesData[userId] = current + net;
+      fs.writeFileSync(cookiesPath, JSON.stringify(cookiesData, null, 2));
 
       const embed = new EmbedBuilder()
         .setTitle('🎲 Résultat du Blackjack')
@@ -306,7 +303,7 @@ client.on('interactionCreate', async interaction => {
           `🧍 Toi : ${player.join(', ')} = **${totalP}**\n` +
           `🤖 Bot : ${bot.join(', ')} = **${totalB}**\n\n` +
           `${result}\n\n` +
-          `💰 Solde : **${cookies[userId]}** cookies`
+          `💰 Solde : **${cookiesData[userId]}** cookies`
         )
         .setColor('#3333cc');
 

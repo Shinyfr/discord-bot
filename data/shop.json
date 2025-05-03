@@ -32,11 +32,11 @@
   {
     "id": "daily_multiplier",
     "name": "Multiplicateur /daily",
-    "description": "Double ton gain quotidien pendant 24 h",
+    "description": "Double ton gain quotidien pendant une semaine",
     "price": 100,
     "type": "multiplier",
     "multiplier": 2,
-    "durationHours": 24
+    "durationHours": 168
   },
   {
     "id": "cookie_factory",
