@@ -2,32 +2,58 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
-const COOKIES_PATH = path.join(__dirname, '../../data/cookies.json');
-const POWERUPS_PATH = path.join(__dirname, '../../data/powerups.json');
+const COOKIES_PATH    = path.join(__dirname, '../../data/cookies.json');
+const POWERUPS_PATH   = path.join(__dirname, '../../data/powerups.json');
+const COOLDOWNS_PATH  = path.join(__dirname, '../../data/cooldowns.json');
+
+const COOLDOWN_MS = 60 * 60 * 1000; // 1 heure
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('magiccookie')
-    .setDescription('✨ Invoque un cookie magique (si tu as acheté le power-up)'), 
+    .setDescription('✨ Invoque un cookie magique (1×/heure si tu as le power-up)'), 
 
   async execute(interaction) {
     const uid = interaction.user.id;
 
-    // Charge tes powerups
+    // Charge les power-ups
     let powerups = {};
     if (fs.existsSync(POWERUPS_PATH)) {
       powerups = JSON.parse(fs.readFileSync(POWERUPS_PATH, 'utf-8'));
     }
-
-    // Vérifie que l'utilisateur a bien acheté magiccookie
-    if (!(powerups[uid] || []).includes('magic_cookie')) {
+    if (! (powerups[uid] || []).includes('magic_cookie')) {
       return interaction.reply({
         content: '❌ Tu n’as pas accès à cette commande (achète d’abord Magic Cookie).',
         ephemeral: true
       });
     }
 
-    // Donne un cookie magique aléatoire entre 1 et 5
+    // Charge les cooldowns
+    let cds = {};
+    if (fs.existsSync(COOLDOWNS_PATH)) {
+      try {
+        cds = JSON.parse(fs.readFileSync(COOLDOWNS_PATH, 'utf-8'));
+      } catch { cds = {}; }
+    }
+    cds.magiccookie = cds.magiccookie || {};
+    const last = cds.magiccookie[uid] || 0;
+    const now  = Date.now();
+    const diff = now - last;
+    if (diff < COOLDOWN_MS) {
+      const remain = COOLDOWN_MS - diff;
+      const minutes = Math.floor(remain / 60000);
+      const seconds = Math.floor((remain % 60000) / 1000);
+      return interaction.reply({
+        content: `❌ Cooldown : reviens dans ${minutes}m${seconds}s pour invoquer à nouveau.`,
+        ephemeral: true
+      });
+    }
+
+    // Met à jour le cooldown
+    cds.magiccookie[uid] = now;
+    fs.writeFileSync(COOLDOWNS_PATH, JSON.stringify(cds, null, 2));
+
+    // Donne un gain aléatoire
     const gain = Math.floor(Math.random() * 5) + 1;
 
     // Mets à jour le solde
