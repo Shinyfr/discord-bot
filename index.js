@@ -1,4 +1,3 @@
-// index.js
 const {
   Client,
   GatewayIntentBits,
@@ -84,7 +83,6 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: '❌ Pas assez de cookies pour jouer !', ephemeral: true });
     }
 
-    // Tirage pondéré
     const weightedEmojis = [
       ...Array(11).fill('🍪'),
       ...Array(2).fill('🍫'),
@@ -132,24 +130,22 @@ client.on('interactionCreate', async interaction => {
       const item = shop.find(i => i.id === itemId);
       if (!item) throw new Error('Item introuvable.');
 
-      // Charge solde et power-ups
-      const cookies  = fs.existsSync(COOKIES_PATH)
+      const cookies = fs.existsSync(COOKIES_PATH)
         ? JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'))
         : {};
       const powerups = fs.existsSync(POWERUPS_PATH)
         ? JSON.parse(fs.readFileSync(POWERUPS_PATH, 'utf-8'))
         : {};
-      const uid     = interaction.user.id;
+      const uid = interaction.user.id;
       const balance = cookies[uid] ?? 0;
 
       if (balance < item.price) {
         return interaction.editReply({ content: '❌ Solde insuffisant.', ephemeral: true });
       }
 
-      // Retirer le prix
       cookies[uid] = balance - item.price;
-
       let msg;
+
       switch (item.type) {
         case 'role':
           await interaction.member.roles.add(item.roleId);
@@ -162,7 +158,8 @@ client.on('interactionCreate', async interaction => {
 
         case 'permission':
           if (!powerups[uid]) powerups[uid] = [];
-          powerups[uid].push({ id: item.id });
+          powerups[uid].push(item.permission);
+          fs.writeFileSync(POWERUPS_PATH, JSON.stringify(powerups, null, 2));
           msg = `✅ Tu peux désormais utiliser **/${item.permission}** !`;
           break;
 
@@ -172,30 +169,11 @@ client.on('interactionCreate', async interaction => {
           msg = `🎁 Mystery Box : tu obtiens **${gainMyst}** cookies !`;
           break;
 
-        case 'multiplier':
-          const now = Date.now();
-          const expiresAt = now + item.durationHours * 3_600_000;
-          if (!powerups[uid]) powerups[uid] = [];
-          powerups[uid].push({ id: item.id, expiresAt });
-          msg = `✅ **${item.name}** ajouté (×${item.multiplier} pendant ${item.durationHours}h, jusqu’à <t:${Math.floor(expiresAt/1000)}:F>) !`;
-          break;
-
-          case 'passive':
-            if (!powerups[uid]) powerups[uid] = [];
-            powerups[uid].push({
-              id: item.id,
-              income: item.income      
-            });
-            msg = `✅ **${item.name}** ajouté à tes power-ups !`;
-            break;
-
         default:
           msg = '✓ Achat effectué !';
       }
 
-      // Sauvegarde
-      fs.writeFileSync(COOKIES_PATH,  JSON.stringify(cookies,  null, 2));
-      fs.writeFileSync(POWERUPS_PATH, JSON.stringify(powerups, null, 2));
+      fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
 
       const embed = new EmbedBuilder()
         .setTitle('🛒 Achat réussi')
@@ -213,7 +191,7 @@ client.on('interactionCreate', async interaction => {
       });
     }
   }
-
+  
   // 4) Blackjack – boutons “hit_…” et “stay_…”
   if (interaction.isButton()) {
     const id = interaction.customId;

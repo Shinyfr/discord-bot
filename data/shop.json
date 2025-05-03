@@ -28,30 +28,5 @@
     "description": "Boîte mystère contenant 0–100 cookies aléatoires",
     "price": 35,
     "type": "mystery"
-  },
-  {
-    "id": "daily_multiplier",
-    "name": "Multiplicateur /daily",
-    "description": "Double ton gain quotidien pendant une semaine",
-    "price": 100,
-    "type": "multiplier",
-    "multiplier": 2,
-    "durationHours": 168
-  },
-  {
-    "id": "cookie_factory",
-    "name": "Cookie Factory",
-    "description": "+5 cookies/jour",
-    "price": 80,
-    "type": "passive",
-    "income": 5
-  },
-  {
-    "id": "cookie_farm",
-    "name": "Cookie Farm",
-    "description": "+1 cookie/jour",
-    "price": 50,
-    "type": "passive",
-    "income": 1
   }
 ]
