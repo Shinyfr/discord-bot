@@ -89,7 +89,7 @@ client.on('interactionCreate', async interaction => {
       }
 
       const cookies = JSON.parse(fs.readFileSync('./data/cookies.json'));
-      cookies[userId] = (cookies[userId] ?? 20) + gain;
+      cookies[userId] = (cookies[userId] ?? 0) + gain;
       fs.writeFileSync('./data/cookies.json', JSON.stringify(cookies, null, 2));
 
       const embed = new EmbedBuilder()

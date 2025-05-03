@@ -40,7 +40,7 @@ module.exports = {
       console.error(e);
     }
 
-    const actuel = cookies[cible.id] ?? 20;
+    const actuel = cookies[cible.id] ?? 0;
     cookies[cible.id] = actuel + montant;
 
     fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));

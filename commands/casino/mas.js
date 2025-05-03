@@ -7,7 +7,7 @@ const COOKIES_PATH = path.join(__dirname, '../../data/cookies.json');
 
 function getUserCookies(userId) {
   const data = JSON.parse(fs.readFileSync(COOKIES_PATH));
-  return data[userId] ?? 20; // solde par défaut
+  return data[userId] ?? 0; // solde par défaut
 }
 
 function setUserCookies(userId, amount) {

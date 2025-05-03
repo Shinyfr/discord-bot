@@ -39,7 +39,7 @@ module.exports = {
 
     // Donne un bonus aléatoire
     const bonus = Math.floor(Math.random() * 11) + 10; // 10 à 20 cookies
-    cookies[userId] = (cookies[userId] ?? 20) + bonus;
+    cookies[userId] = (cookies[userId] ?? 0) + bonus;
     cooldowns[userId] = now;
 
     // Sauvegarde

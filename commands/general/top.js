@@ -19,11 +19,11 @@ module.exports = {
       console.error('Erreur lecture cookies.json :', error);
     }
 
-    // Ajouter des cookies par défaut (20) aux utilisateurs qui n'ont pas encore de cookies enregistrés
-    // Pas besoin de récupérer tous les membres ici, simplement les utilisateurs qui existent déjà
-    const users = Object.keys(cookies);
-    if (users.length === 0) {
-      return interaction.reply({ content: "Le fichier cookies.json est vide. Aucun utilisateur n'a encore interagi avec le bot.", ephemeral: true });
+    // Ajouter 0 cookies par défaut pour les utilisateurs qui n'ont pas encore de cookies enregistrés
+    for (const userId in cookies) {
+      if (cookies[userId] === undefined) {
+        cookies[userId] = 0; // Attribuer 0 cookies par défaut si le solde est inexistant
+      }
     }
 
     // Trier les joueurs par nombre de cookies (du plus grand au plus petit)

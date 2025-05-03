@@ -20,7 +20,7 @@ module.exports = {
       ? JSON.parse(fs.readFileSync(COOKIES_PATH))
       : {};
 
-    const solde = cookies[cible.id] ?? 20;
+    const solde = cookies[cible.id] ?? 0;
 
     const embed = new EmbedBuilder()
       .setTitle('🍪 Solde de cookies')

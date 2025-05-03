@@ -23,7 +23,7 @@ module.exports = {
     try {
       cookies = JSON.parse(fs.readFileSync(COOKIES_PATH));
     } catch {}
-    const solde = cookies[userId] ?? 20;
+    const solde = cookies[userId] ?? 0;
 
     if (mise <= 0) {
       return interaction.reply({ content: "❌ Mise invalide.", ephemeral: true });
