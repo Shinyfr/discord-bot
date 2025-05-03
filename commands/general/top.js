@@ -20,13 +20,11 @@ module.exports = {
     }
 
     // Ajouter des cookies par défaut (20) aux utilisateurs qui n'ont pas encore de cookies enregistrés
-    // et aux utilisateurs dans le serveur qui n'ont pas encore interagi avec le bot
-    const allUsers = await interaction.guild.members.fetch(); // Récupère tous les membres du serveur
-    allUsers.forEach(user => {
-      if (!(user.id in cookies)) {
-        cookies[user.id] = 20; // Attribuer 20 cookies par défaut si le solde est inexistant
-      }
-    });
+    // Pas besoin de récupérer tous les membres ici, simplement les utilisateurs qui existent déjà
+    const users = Object.keys(cookies);
+    if (users.length === 0) {
+      return interaction.reply({ content: "Le fichier cookies.json est vide. Aucun utilisateur n'a encore interagi avec le bot.", ephemeral: true });
+    }
 
     // Trier les joueurs par nombre de cookies (du plus grand au plus petit)
     const sortedPlayers = Object.entries(cookies)
