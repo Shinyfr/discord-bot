@@ -7,6 +7,8 @@ const COOLDOWN_PATH  = path.join(__dirname, '../../data/cooldowns.json');
 const POWERUPS_PATH  = path.join(__dirname, '../../data/powerups.json');
 const COOLDOWN_HOURS = 24;
 
+const TEST_USER_ID = '881571558114590762';
+
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('daily')
@@ -27,14 +29,17 @@ module.exports = {
     const lastClaim = cooldowns[userId] ?? 0;
     const hoursDiff = (now - lastClaim) / 3_600_000;
 
-    // 2) Vérifier le cooldown
-    if (hoursDiff < COOLDOWN_HOURS) {
+    // 2) Vérifier le cooldown (sauter pour l'utilisateur de test)
+    if (userId !== TEST_USER_ID && hoursDiff < COOLDOWN_HOURS) {
       const rem = Math.ceil(COOLDOWN_HOURS - hoursDiff);
       return interaction.reply({
-        content: `⏳ Tu as déjà récupéré ton bonus aujourd’hui.\nRéessaie dans **${rem}h**.`,
+        content: `⏳ Tu as déjà récupéré ton bonus aujourd'hui.\nRéessaie dans **${rem}h**.`,
         ephemeral: true
       });
     }
+
+    // Si utilisateur de test, on remet lastClaim à 0 pour traçage plus tard
+    if (userId === TEST_USER_ID) lastClaim = 0;
 
     // 3) Calcul du bonus de base
     let bonus = Math.floor(Math.random() * 11) + 10; // 10–20 cookies
