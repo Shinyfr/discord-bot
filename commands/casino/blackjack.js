@@ -2,27 +2,15 @@ const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, Butt
 const fs = require('fs');
 const path = require('path');
 
-// Lecture du fichier des cookies
 const COOKIES_PATH = path.join(__dirname, '../../data/cookies.json');
-
-function getUserCookies(userId) {
-  const data = JSON.parse(fs.readFileSync(COOKIES_PATH));
-  return data[userId] ?? 20; // solde par défaut
-}
-
-function setUserCookies(userId, amount) {
-  const data = JSON.parse(fs.readFileSync(COOKIES_PATH));
-  data[userId] = amount;
-  fs.writeFileSync(COOKIES_PATH, JSON.stringify(data, null, 2));
-}
 
 module.exports = {
   data: new SlashCommandBuilder()
     .setName('blackjack')
-    .setDescription('🃏 Joue au blackjack avec tes cookies !')
-    .addIntegerOption(option => 
+    .setDescription('🃏 Joue au blackjack contre le bot')
+    .addIntegerOption(option =>
       option.setName('mise')
-        .setDescription('Le montant à parier')
+        .setDescription('Nombre de cookies à miser')
         .setRequired(true)
     ),
 
@@ -30,36 +18,39 @@ module.exports = {
     const userId = interaction.user.id;
     const mise = interaction.options.getInteger('mise');
 
-    // Vérifie que le joueur a assez de cookies pour parier
-    let cookies = JSON.parse(fs.readFileSync(COOKIES_PATH));
-    const currentCookies = cookies[userId] ?? 20;
+    // Charge les cookies
+    let cookies = {};
+    try {
+      cookies = JSON.parse(fs.readFileSync(COOKIES_PATH));
+    } catch {}
+    const solde = cookies[userId] ?? 20;
 
-    if (currentCookies < mise) {
-      return interaction.reply({ content: "❌ Tu n'as pas assez de cookies pour cette mise !", ephemeral: true });
+    if (mise <= 0) {
+      return interaction.reply({ content: "❌ Mise invalide.", ephemeral: true });
     }
 
-    // Retirer la mise du solde du joueur
-    cookies[userId] = currentCookies - mise;
-    fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
+    if (mise > solde) {
+      return interaction.reply({ content: "❌ Tu n’as pas assez de cookies.", ephemeral: true });
+    }
 
-    // Cartes du joueur et du bot
-    const drawCard = () => Math.floor(Math.random() * 10) + 2; // Tirage d'une carte entre 2 et 11 (as = 11 ici)
-    const playerCards = [drawCard(), drawCard()];
-    const botCards = [drawCard(), drawCard()];
+    // Init du jeu
+    const draw = () => Math.floor(Math.random() * 10) + 2;
+    const joueur = [draw(), draw()];
+    const bot = [draw(), draw()];
 
-    const playerTotal = playerCards.reduce((a, b) => a + b, 0);
-    const botTotal = botCards.reduce((a, b) => a + b, 0);
+    const row = new ActionRowBuilder().addComponents(
+      new ButtonBuilder().setCustomId(`hit_${userId}_${mise}_${joueur.join('_')}_${bot.join('_')}`).setLabel('🃙 Tirer').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`stay_${userId}_${mise}_${joueur.join('_')}_${bot.join('_')}`).setLabel('🛑 Rester').setStyle(ButtonStyle.Secondary)
+    );
 
     const embed = new EmbedBuilder()
       .setTitle('🃏 Blackjack')
-      .setDescription(`Mise : ${mise} cookies\n\nTes cartes : ${playerCards.join(' | ')} (total: ${playerTotal})\nCartes du bot : ${botCards[0]} | ?`)
+      .setDescription(`Tes cartes : **${joueur.join(', ')}** (total: ${joueur.reduce((a, b) => a + b)})\nCartes du bot : **?** et **?**\n\n🎰 Mise : ${mise} cookies`)
       .setColor('#5865f2');
 
-    const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`hit_${userId}_${mise}_${playerCards.join('_')}_${botCards.join('_')}`).setLabel('🃙 Tirer').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId(`stay_${userId}_${mise}_${playerCards.join('_')}_${botCards.join('_')}`).setLabel('🛑 Rester').setStyle(ButtonStyle.Secondary)
-    );
-
     await interaction.reply({ embeds: [embed], components: [row] });
+
+    cookies[userId] = solde - mise;
+    fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
   }
 };
