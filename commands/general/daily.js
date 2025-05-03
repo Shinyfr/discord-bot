@@ -2,9 +2,9 @@ const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
-const COOKIES_PATH   = path.join(__dirname, '../../data/cookies.json');
-const COOLDOWN_PATH  = path.join(__dirname, '../../data/cooldowns.json');
-const POWERUPS_PATH  = path.join(__dirname, '../../data/powerups.json');
+const COOKIES_PATH   = path.join(__dirname, '../data/cookies.json');
+const COOLDOWN_PATH  = path.join(__dirname, '../data/cooldowns.json');
+const POWERUPS_PATH  = path.join(__dirname, '../data/powerups.json');
 const COOLDOWN_HOURS = 24;
 
 module.exports = {
