@@ -66,53 +66,41 @@ client.on('interactionCreate', async interaction => {
       const [_, userId, mise, ...cartes] = customId.split('_');
       const joueur = cartes.slice(0, -2).map(n => parseInt(n));
       const bot = cartes.slice(-2).map(n => parseInt(n));
-    
+
       while (bot.reduce((a, b) => a + b) < 17) {
         bot.push(Math.floor(Math.random() * 10) + 2);
       }
-    
+
       const totalJoueur = joueur.reduce((a, b) => a + b);
       const totalBot = bot.reduce((a, b) => a + b);
-    
       let resultat = '';
       let gain = 0;
-    
-      const cookies = JSON.parse(fs.readFileSync('./data/cookies.json'));
-      const current = cookies[userId] ?? 0;
-    
-      // Vérification si le joueur a assez de cookies pour la mise
-      if (current < mise) {
-        return interaction.update({ content: "❌ Tu n'as pas assez de cookies pour cette mise !", components: [] });
-      }
-    
-      // Calcul du résultat du jeu
+
       if (totalJoueur > 21) {
         resultat = '💥 Tu as dépassé 21. Tu perds.';
-        gain = 0;
       } else if (totalBot > 21 || totalJoueur > totalBot) {
         resultat = `🎉 Tu gagnes ${mise * 2} cookies !`;
         gain = mise * 2;
       } else if (totalJoueur === totalBot) {
         resultat = '🤝 Égalité, tu récupères ta mise.';
-        gain = 0; // Pas de gain ici, juste on annule la perte
+        gain = mise;
       } else {
         resultat = '😢 Le bot a gagné. Tu perds ta mise.';
-        gain = 0;
       }
-    
-      cookies[userId] = current + (gain - mise); // Calcul du solde
+
+      const cookies = JSON.parse(fs.readFileSync('./data/cookies.json'));
+      cookies[userId] = (cookies[userId] ?? 20) + gain;
       fs.writeFileSync('./data/cookies.json', JSON.stringify(cookies, null, 2));
-    
+
       const embed = new EmbedBuilder()
         .setTitle('🎲 Résultat du Blackjack')
         .setDescription(
           `🧍 Toi : ${joueur.join(', ')} = **${totalJoueur}**\n🤖 Bot : ${bot.join(', ')} = **${totalBot}**\n\n${resultat}`
         )
         .setColor('#3333cc');
-    
+
       return interaction.update({ embeds: [embed], components: [] });
     }
-    
 
     // 🃏 Blackjack – tirer
     if (customId.startsWith('hit_')) {
