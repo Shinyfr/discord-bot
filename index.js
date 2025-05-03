@@ -68,7 +68,7 @@ client.on('interactionCreate', async interaction => {
 
   // 2) Machine à sous (button spin_)
   if (interaction.isButton() && interaction.customId.startsWith('spin_')) {
-    const [ , userId ] = interaction.customId.split('_');
+    const [, userId] = interaction.customId.split('_');
     if (interaction.user.id !== userId) {
       return interaction.reply({ content: '❌ Ce n’est pas ta machine à sous !', ephemeral: true });
     }
@@ -89,8 +89,7 @@ client.on('interactionCreate', async interaction => {
       ...Array(2).fill('🎁'),
       ...Array(3).fill('💣'),
     ];
-    const spin = () =>
-      weightedEmojis[Math.floor(Math.random() * weightedEmojis.length)];
+    const spin = () => weightedEmojis[Math.floor(Math.random() * weightedEmojis.length)];
     const grid = [spin(), spin(), spin()];
 
     let gain = 0;
@@ -206,15 +205,15 @@ client.on('interactionCreate', async interaction => {
     // Hit
     if (id.startsWith('hit_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
-      const player = rest.slice(0, -2).map(n => parseInt(n));
-      const bot = rest.slice(-2).map(n => parseInt(n));
+      const player = rest.slice(0, -2).map(n => parseInt(n, 10));
+      const bot = rest.slice(-2).map(n => parseInt(n, 10));
       if (interaction.user.id !== userId) {
         return interaction.reply({ content: "❌ Ce n’est pas ta partie.", ephemeral: true });
       }
 
       const card = Math.floor(Math.random() * 10) + 2;
       player.push(card);
-      const total = player.reduce((a,b) => a + b, 0);
+      const total = player.reduce((a, b) => a + b, 0);
 
       if (total > 21) {
         const embed = new EmbedBuilder()
@@ -242,22 +241,21 @@ client.on('interactionCreate', async interaction => {
           `Cartes du bot : **?** et **?**\n🎰 Mise : ${mise}`
         )
         .setColor('#5865f2');
-
       return interaction.update({ embeds: [embed], components: [row] });
     }
 
     // Stay
     if (id.startsWith('stay_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
-      const player = rest.slice(0, -2).map(n => parseInt(n));
-      const bot = rest.slice(-2).map(n => parseInt(n));
+      const player = rest.slice(0, -2).map(n => parseInt(n, 10));
+      const bot = rest.slice(-2).map(n => parseInt(n, 10));
 
-      while (bot.reduce((a,b) => a + b, 0) < 17) {
+      while (bot.reduce((a, b) => a + b, 0) < 17) {
         bot.push(Math.floor(Math.random() * 10) + 2);
       }
 
-      const totalP = player.reduce((a,b) => a + b, 0);
-      const totalB = bot.reduce((a,b) => a + b, 0);
+      const totalP = player.reduce((a, b) => a + b, 0);
+      const totalB = bot.reduce((a, b) => a + b, 0);
       let result = '';
       let net = 0;
 
@@ -268,7 +266,7 @@ client.on('interactionCreate', async interaction => {
         result = `🎉 Tu gagnes ${mise} cookies !`;
         net = parseInt(mise, 10);
       } else if (totalP === totalB) {
-        result = '🤝 Égalité, tu récupères ta mise.';
+        result = '🤝 Égalité, ta mise t’est rendue.';
         net = 0;
       } else {
         result = `😢 Le bot a gagné. Tu perds ${mise} cookies.`;
