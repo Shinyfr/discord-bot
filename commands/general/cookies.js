@@ -26,7 +26,6 @@ module.exports = {
       .setTitle('🍪 Solde de cookies')
       .setDescription(`👤 ${cible.username} possède **${solde}** cookies.`)
       .setColor('#f5a623')
-      .setFooter({ text: `Demandé par ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
     await interaction.reply({ embeds: [embed] });
   }
