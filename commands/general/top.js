@@ -20,11 +20,13 @@ module.exports = {
     }
 
     // Ajouter des cookies par défaut (20) aux utilisateurs qui n'ont pas encore de cookies enregistrés
-    for (const userId in cookies) {
-      if (cookies[userId] === undefined) {
-        cookies[userId] = 20; // Attribuer 20 cookies par défaut si le solde est inexistant
+    // et aux utilisateurs dans le serveur qui n'ont pas encore interagi avec le bot
+    const allUsers = await interaction.guild.members.fetch(); // Récupère tous les membres du serveur
+    allUsers.forEach(user => {
+      if (!(user.id in cookies)) {
+        cookies[user.id] = 20; // Attribuer 20 cookies par défaut si le solde est inexistant
       }
-    }
+    });
 
     // Trier les joueurs par nombre de cookies (du plus grand au plus petit)
     const sortedPlayers = Object.entries(cookies)
