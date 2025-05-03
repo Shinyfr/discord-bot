@@ -24,7 +24,7 @@ client.on('messageCreate', message => {
 
   // Réagit si le message contient "cookie" (insensible à la casse)
   if (message.content.toLowerCase().includes('cookie')) {
-    message.react('🍪'); // Peut être remplacé par un ID personnalisé si emoji custom
+    message.react('1230057572854272080');
   }
 });
 
