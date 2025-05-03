@@ -53,8 +53,9 @@ client.on('interactionCreate', async interaction => {
     try {
       await command.execute(interaction);
     } catch (error) {
-      console.error(error);
-      await interaction.reply({ content: '❌ Une erreur est survenue.', ephemeral: true });
+      console.error('Erreur dans /' + interaction.commandName, error);
+      // Affiche la vraie erreur pour debug
+      await interaction.reply({ content: `❌ Erreur : ${error.message}`, ephemeral: true });
     }
   }
 
