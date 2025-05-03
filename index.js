@@ -1,4 +1,4 @@
-const { Client, GatewayIntentBits, Collection, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { Client, GatewayIntentBits, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
 require('dotenv').config();
 const fs = require('fs');
 const path = require('path');
@@ -11,21 +11,18 @@ const client = new Client({
   ]
 });
 
-client.commands = new Collection();
-
-// Chargement des commandes slash
+// Lecture des commandes
+client.commands = new Map();
 const foldersPath = path.join(__dirname, 'commands');
 const commandFolders = fs.readdirSync(foldersPath);
+
 for (const folder of commandFolders) {
-  const commandsPath = path.join(foldersPath, folder);
-  const commandFiles = fs.readdirSync(commandsPath).filter(file => file.endsWith('.js'));
+  const commandFiles = fs.readdirSync(path.join(foldersPath, folder)).filter(file => file.endsWith('.js'));
   for (const file of commandFiles) {
-    const filePath = path.join(commandsPath, file);
+    const filePath = path.join(foldersPath, folder, file);
     const command = require(filePath);
     if ('data' in command && 'execute' in command) {
       client.commands.set(command.data.name, command);
-    } else {
-      console.warn(`[AVERTISSEMENT] La commande à ${filePath} est invalide.`);
     }
   }
 }
@@ -34,92 +31,31 @@ client.once('ready', () => {
   console.log(`Bot en ligne : ${client.user.tag}`);
 });
 
-// Commandes texte
-client.on('messageCreate', message => {
-  if (message.author.bot) return;
-  if (message.content === '!ping') {
-    message.reply('pong !');
-  }
-  if (message.content.toLowerCase().includes('cookie')) {
-    message.react('1230057572854272080'); // ID de ton emoji
-  }
-});
-
-// Gestion des slash commands et boutons
+// Commandes blackjack et gestion de l'interaction
 client.on('interactionCreate', async interaction => {
-  if (interaction.isChatInputCommand()) {
-    const command = client.commands.get(interaction.commandName);
-    if (!command) return;
-    try {
-      await command.execute(interaction);
-    } catch (error) {
-      console.error(error);
-      await interaction.reply({ content: '❌ Une erreur est survenue.', ephemeral: true });
-    }
-  }
-
   if (interaction.isButton()) {
     const customId = interaction.customId;
 
-    // 🃏 Blackjack – rester
-    if (customId.startsWith('stay_')) {
+    // Blackjack - Tirer une carte
+    if (customId.startsWith('hit_')) {
       const [_, userId, mise, ...cartes] = customId.split('_');
       const joueur = cartes.slice(0, -2).map(n => parseInt(n));
       const bot = cartes.slice(-2).map(n => parseInt(n));
 
-      while (bot.reduce((a, b) => a + b) < 17) {
-        bot.push(Math.floor(Math.random() * 10) + 2);
-      }
-
-      const totalJoueur = joueur.reduce((a, b) => a + b);
-      const totalBot = bot.reduce((a, b) => a + b);
-      let resultat = '';
-      let gain = 0;
-
-      if (totalJoueur > 21) {
-        resultat = '💥 Tu as dépassé 21. Tu perds.';
-      } else if (totalBot > 21 || totalJoueur > totalBot) {
-        resultat = `🎉 Tu gagnes ${mise * 2} cookies !`;
-        gain = mise * 2;
-      } else if (totalJoueur === totalBot) {
-        resultat = '🤝 Égalité, tu récupères ta mise.';
-        gain = mise;
-      } else {
-        resultat = '😢 Le bot a gagné. Tu perds ta mise.';
-      }
-
-      const cookies = JSON.parse(fs.readFileSync('./data/cookies.json'));
-      cookies[userId] = (cookies[userId] ?? 20) + gain;
-      fs.writeFileSync('./data/cookies.json', JSON.stringify(cookies, null, 2));
-
-      const embed = new EmbedBuilder()
-        .setTitle('🎲 Résultat du Blackjack')
-        .setDescription(
-          `🧍 Toi : ${joueur.join(', ')} = **${totalJoueur}**\n🤖 Bot : ${bot.join(', ')} = **${totalBot}**\n\n${resultat}`
-        )
-        .setColor('#3333cc');
-
-      return interaction.update({ embeds: [embed], components: [] });
-    }
-
-    // 🃏 Blackjack – tirer
-    if (customId.startsWith('hit_')) {
-      const [_, userId, mise, ...rest] = customId.split('_');
-      const joueur = rest.slice(0, -2).map(n => parseInt(n));
-      const bot = rest.slice(-2).map(n => parseInt(n));
-
+      // Si l'utilisateur essaie de tricher
       if (interaction.user.id !== userId) {
         return interaction.reply({ content: "❌ Ce n’est pas ta partie.", ephemeral: true });
       }
 
-      const nouvelle = Math.floor(Math.random() * 10) + 2;
-      joueur.push(nouvelle);
-      const total = joueur.reduce((a, b) => a + b);
+      // Tirer une carte pour le joueur
+      const nouvelleCarte = Math.floor(Math.random() * 10) + 2;
+      joueur.push(nouvelleCarte);
+      const totalJoueur = joueur.reduce((acc, card) => acc + card, 0);
 
-      if (total > 21) {
+      if (totalJoueur > 21) {
         const embed = new EmbedBuilder()
           .setTitle('💥 Perdu !')
-          .setDescription(`Tu as tiré **${nouvelle}** et dépassé 21.\n🃙 Tes cartes : ${joueur.join(', ')} (**${total}**)`)
+          .setDescription(`Tu as tiré **${nouvelleCarte}** et dépassé 21.\n🃙 Tes cartes : ${joueur.join(', ')} (total: ${totalJoueur})`)
           .setColor('#cc0000');
 
         return interaction.update({ embeds: [embed], components: [] });
@@ -132,12 +68,66 @@ client.on('interactionCreate', async interaction => {
 
       const embed = new EmbedBuilder()
         .setTitle('🃏 Blackjack')
-        .setDescription(`Tes cartes : **${joueur.join(', ')}** (total: ${total})\nCartes du bot : **?** et **?**\n\n🎰 Mise : ${mise} cookies`)
+        .setDescription(`Tes cartes : **${joueur.join(', ')}** (total: ${totalJoueur})\nCartes du bot : **?** et **?**\n\n🎰 Mise : ${mise} cookies`)
         .setColor('#5865f2');
 
       return interaction.update({ embeds: [embed], components: [row] });
     }
+
+    // Blackjack - Rester
+    if (customId.startsWith('stay_')) {
+      const [_, userId, mise, ...cartes] = customId.split('_');
+      const joueur = cartes.slice(0, -2).map(n => parseInt(n));
+      const bot = cartes.slice(-2).map(n => parseInt(n));
+
+      // Jouer automatiquement pour le bot
+      while (bot.reduce((acc, card) => acc + card, 0) < 17) {
+        bot.push(Math.floor(Math.random() * 10) + 2);
+      }
+
+      const totalJoueur = joueur.reduce((acc, card) => acc + card, 0);
+      const totalBot = bot.reduce((acc, card) => acc + card, 0);
+
+      let resultat = '';
+      let gain = 0;
+
+      const cookies = JSON.parse(fs.readFileSync('./data/cookies.json'));
+      const current = cookies[userId] ?? 0;
+
+      // Vérifier que le joueur a assez de cookies pour parier
+      if (current < mise) {
+        return interaction.reply({ content: "❌ Tu n'as pas assez de cookies pour cette mise !", ephemeral: true });
+      }
+
+      // Logique de gains et de pertes
+      if (totalJoueur > 21) {
+        resultat = '💥 Tu as dépassé 21. Tu perds.';
+        gain = 0;
+      } else if (totalBot > 21 || totalJoueur > totalBot) {
+        resultat = `🎉 Tu gagnes ${mise * 2} cookies !`;
+        gain = mise * 2;
+      } else if (totalJoueur === totalBot) {
+        resultat = '🤝 Égalité, tu récupères ta mise.';
+        gain = mise; // Retour de la mise en cas d'égalité
+      } else {
+        resultat = '😢 Le bot a gagné. Tu perds ta mise.';
+        gain = 0;
+      }
+
+      cookies[userId] = current + (gain - mise); // Mise à jour du solde
+      fs.writeFileSync('./data/cookies.json', JSON.stringify(cookies, null, 2));
+
+      const embed = new EmbedBuilder()
+        .setTitle('🎲 Résultat du Blackjack')
+        .setDescription(
+          `🧍 Toi : ${joueur.join(', ')} = **${totalJoueur}**\n🤖 Bot : ${bot.join(', ')} = **${totalBot}**\n\n${resultat}`
+        )
+        .setColor('#3333cc');
+
+      return interaction.update({ embeds: [embed], components: [] });
+    }
   }
 });
 
+// Connexion au bot Discord
 client.login(process.env.TOKEN);
