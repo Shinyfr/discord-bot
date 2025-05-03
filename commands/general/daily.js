@@ -7,7 +7,7 @@ const COOLDOWN_PATH  = path.join(__dirname, '../../data/cooldowns.json');
 const COOLDOWN_HOURS = 24;
 
 // Remplace par ton ID Discord pour ignorer le cooldown lors des tests
-const TEST_USER_ID = '881571558114590762';
+const TEST_USER_ID = '';
 
 module.exports = {
   data: new SlashCommandBuilder()
