@@ -15,7 +15,7 @@ const fs = require('fs');
 const path = require('path');
 
 const COOKIE_COST = 5;
-const COOKIES_PATH = path.join(__dirname, 'data', 'cookies.json');
+const COOKIES_PATH = path.join(__dirname, 'data/cookies.json');
 
 const client = new Client({
   intents: [
@@ -68,7 +68,7 @@ client.on('interactionCreate', async interaction => {
 
   // 2) Machine à sous (button spin_)
   if (interaction.isButton() && interaction.customId.startsWith('spin_')) {
-    const [, userId] = interaction.customId.split('_');
+    const [ , userId ] = interaction.customId.split('_');
     if (interaction.user.id !== userId) {
       return interaction.reply({ content: '❌ Ce n’est pas ta machine à sous !', ephemeral: true });
     }
@@ -125,13 +125,14 @@ client.on('interactionCreate', async interaction => {
   ) {
     await interaction.deferReply({ ephemeral: true });
     try {
-      const shop = JSON.parse(fs.readFileSync(path.join(__dirname, 'data', 'shop.json'), 'utf-8'));
+      const shop = JSON.parse(fs.readFileSync('./data/shop.json', 'utf-8'));
       const itemId = interaction.values[0];
       const item = shop.find(i => i.id === itemId);
       if (!item) throw new Error('Item introuvable.');
 
-      const cookies = fs.existsSync(COOKIES_PATH)
-        ? JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'))
+      const cookiesPath = './data/cookies.json';
+      const cookies = fs.existsSync(cookiesPath)
+        ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
         : {};
       const uid = interaction.user.id;
       const balance = cookies[uid] ?? 0;
@@ -140,11 +141,11 @@ client.on('interactionCreate', async interaction => {
       }
 
       cookies[uid] = balance - item.price;
-      fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
+      fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
 
       const savePowerup = (userId, pid) => {
-        const puPath = path.join(__dirname, 'data', 'powerups.json');
-        const pu = fs.existsSync(puPath) ? JSON.parse(fs.readFileSync(puPath, 'utf-8')) : {};
+        const puPath = './data/powerups.json';
+        const pu = fs.existsSync(puPath) ? JSON.parse(fs.readFileSync(puPath)) : {};
         if (!pu[userId]) pu[userId] = [];
         if (!pu[userId].includes(pid)) {
           pu[userId].push(pid);
@@ -159,7 +160,7 @@ client.on('interactionCreate', async interaction => {
           msg = `✅ Tu as reçu le rôle **${item.name}** !`;
           break;
         case 'emoji':
-          msg = `✅ Tu as acheté **${item.name}** !\n👉 Envoie-moi maintenant l’emoji.`;
+          msg = `✅ Tu as acheté **${item.name}** !\n👉 Envoie-moi maintenant l’emoji que tu souhaites ajouter au serveur.`;
           break;
         case 'permission':
           savePowerup(uid, item.id);
@@ -168,7 +169,7 @@ client.on('interactionCreate', async interaction => {
         case 'mystery':
           const gainMyst = Math.floor(Math.random() * 101);
           cookies[uid] += gainMyst;
-          fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
+          fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
           msg = `🎁 Mystery Box : tu obtiens **${gainMyst}** cookies !`;
           break;
         case 'multiplier':
@@ -191,35 +192,34 @@ client.on('interactionCreate', async interaction => {
       const noPerm = err.code === 50013;
       return interaction.editReply({
         content: noPerm
-          ? '❌ Je n’ai pas la permission d’ajouter ce rôle.'
+          ? '❌ Je n’ai pas la permission d’ajouter ce rôle. Vérifie la hiérarchie et la permission **Manage Roles**.'
           : `❌ Erreur : ${err.message}`,
         ephemeral: true
       });
     }
   }
 
-  // 4) Blackjack – hit_… & stay_…
+  // 4) Blackjack – boutons “hit_…” et “stay_…”
   if (interaction.isButton()) {
     const id = interaction.customId;
 
-    // HIT
+    // Hit
     if (id.startsWith('hit_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
-      const player = rest.slice(0, -2).map(n => parseInt(n, 10));
-      const bot = rest.slice(-2).map(n => parseInt(n, 10));
-
+      const player = rest.slice(0, -2).map(n => parseInt(n));
+      const bot = rest.slice(-2).map(n => parseInt(n));
       if (interaction.user.id !== userId) {
-        return interaction.reply({ content: '❌ Ce n’est pas ta partie.', ephemeral: true });
+        return interaction.reply({ content: "❌ Ce n’est pas ta partie.", ephemeral: true });
       }
 
       const card = Math.floor(Math.random() * 10) + 2;
       player.push(card);
-      const total = player.reduce((a, b) => a + b, 0);
+      const total = player.reduce((a,b) => a + b, 0);
 
       if (total > 21) {
         const embed = new EmbedBuilder()
           .setTitle('💥 Perdu !')
-          .setDescription(`Tu as tiré **${card}**, dépassement !\nCartes : ${player.join(', ')} (**${total}**)`)
+          .setDescription(`Tu as tiré **${card}** et dépassé 21.\n🃙 Tes cartes : ${player.join(', ')} (total: ${total})`)
           .setColor('#cc0000');
         return interaction.update({ embeds: [embed], components: [] });
       }
@@ -238,28 +238,26 @@ client.on('interactionCreate', async interaction => {
       const embed = new EmbedBuilder()
         .setTitle('🃏 Blackjack')
         .setDescription(
-          `Tes cartes : **${player.join(', ')}** (total : ${total})\n` +
-          `Cartes du bot : **?** et **?**\n` +
-          `🎰 Mise : ${mise} cookies`
+          `Tes cartes : **${player.join(', ')}** (total: ${total})\n` +
+          `Cartes du bot : **?** et **?**\n🎰 Mise : ${mise}`
         )
         .setColor('#5865f2');
 
       return interaction.update({ embeds: [embed], components: [row] });
     }
 
-    // STAY
+    // Stay
     if (id.startsWith('stay_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
-      const player = rest.slice(0, -2).map(n => parseInt(n, 10));
-      const bot = rest.slice(-2).map(n => parseInt(n, 10));
+      const player = rest.slice(0, -2).map(n => parseInt(n));
+      const bot = rest.slice(-2).map(n => parseInt(n));
 
-      // Le bot tire jusque 17
-      while (bot.reduce((a, b) => a + b, 0) < 17) {
+      while (bot.reduce((a,b) => a + b, 0) < 17) {
         bot.push(Math.floor(Math.random() * 10) + 2);
       }
 
-      const totalP = player.reduce((a, b) => a + b, 0);
-      const totalB = bot.reduce((a, b) => a + b, 0);
+      const totalP = player.reduce((a,b) => a + b, 0);
+      const totalB = bot.reduce((a,b) => a + b, 0);
       let result = '';
       let net = 0;
 
@@ -270,19 +268,20 @@ client.on('interactionCreate', async interaction => {
         result = `🎉 Tu gagnes ${mise} cookies !`;
         net = parseInt(mise, 10);
       } else if (totalP === totalB) {
-        result = '🤝 Égalité, ta mise te revient.';
+        result = '🤝 Égalité, tu récupères ta mise.';
         net = 0;
       } else {
         result = `😢 Le bot a gagné. Tu perds ${mise} cookies.`;
         net = -parseInt(mise, 10);
       }
 
-      const cookies = fs.existsSync(COOKIES_PATH)
-        ? JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'))
+      const cookiesPath = './data/cookies.json';
+      const cookies = fs.existsSync(cookiesPath)
+        ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
         : {};
       const current = cookies[userId] ?? 0;
       cookies[userId] = current + net;
-      fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
+      fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
 
       const embed = new EmbedBuilder()
         .setTitle('🎲 Résultat du Blackjack')
