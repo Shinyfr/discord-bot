@@ -8,7 +8,7 @@ const POWERUPS_PATH  = path.join(__dirname, '../../data/powerups.json');
 const COOLDOWN_HOURS = 24;
 
 // Remplace par ton ID Discord pour ignorer le cooldown
-enableTesting: const TEST_USER_ID = '881571558114590762';
+const TEST_USER_ID = '881571558114590762';
 
 module.exports = {
   data: new SlashCommandBuilder()
