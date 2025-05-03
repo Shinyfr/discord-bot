@@ -34,13 +34,13 @@ module.exports = {
     }
 
     // Init du jeu
-    const draw = () => Math.floor(Math.random() * 10) + 2; // entre 2 et 11
+    const draw = () => Math.floor(Math.random() * 10) + 2;
     const joueur = [draw(), draw()];
     const bot = [draw(), draw()];
 
     const row = new ActionRowBuilder().addComponents(
-      new ButtonBuilder().setCustomId(`hit_${userId}`).setLabel('🃙 Tirer').setStyle(ButtonStyle.Primary),
-      new ButtonBuilder().setCustomId(`stay_${userId}_${mise}_${joueur[0]}_${joueur[1]}_${bot[0]}_${bot[1]}`).setLabel('🛑 Rester').setStyle(ButtonStyle.Secondary)
+      new ButtonBuilder().setCustomId(`hit_${userId}_${mise}_${joueur.join('_')}_${bot.join('_')}`).setLabel('🃙 Tirer').setStyle(ButtonStyle.Primary),
+      new ButtonBuilder().setCustomId(`stay_${userId}_${mise}_${joueur.join('_')}_${bot.join('_')}`).setLabel('🛑 Rester').setStyle(ButtonStyle.Secondary)
     );
 
     const embed = new EmbedBuilder()
@@ -50,7 +50,6 @@ module.exports = {
 
     await interaction.reply({ embeds: [embed], components: [row] });
 
-    // MAJ temporaire du solde (on bloque la mise)
     cookies[userId] = solde - mise;
     fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookies, null, 2));
   }
