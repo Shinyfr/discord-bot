@@ -69,36 +69,30 @@ client.on('interactionCreate', async interaction => {
   // 2) Machine à sous (button spin_)
   if (interaction.isButton() && interaction.customId.startsWith('spin_')) {
     const [ , userId ] = interaction.customId.split('_');
-    // Assure-toi que c'est bien le même utilisateur
     if (interaction.user.id !== userId) {
       return interaction.reply({ content: '❌ Ce n’est pas ta machine à sous !', ephemeral: true });
     }
-    // Charge le solde
+
     const cookiesData = fs.existsSync(COOKIES_PATH)
       ? JSON.parse(fs.readFileSync(COOKIES_PATH, 'utf-8'))
       : {};
     const current = cookiesData[userId] ?? 0;
-
     if (current < COOKIE_COST) {
       return interaction.reply({ content: '❌ Pas assez de cookies pour jouer !', ephemeral: true });
     }
 
-    // Effectue le spin
+    // Tirage pondéré pour 1/6 de chance de triple 🍪
     const weightedEmojis = [
-      // 🍪 x11 → P(🍪)=11/20≈0.55 → P(3×🍪)≈(0.55)^3≈0.166≈1/6
       ...Array(11).fill('🍪'),
-      // Répartition des 9 restantes
       ...Array(2).fill('🍫'),
       ...Array(2).fill('🍩'),
       ...Array(2).fill('🎁'),
       ...Array(3).fill('💣'),
     ];
-    const spin = () => weightedEmojis[
-      Math.floor(Math.random() * weightedEmojis.length)
-    ];
+    const spin = () =>
+      weightedEmojis[Math.floor(Math.random() * weightedEmojis.length)];
     const grid = [spin(), spin(), spin()];
 
-    // Calcule le gain
     let gain = 0;
     if (grid[0] === grid[1] && grid[1] === grid[2]) {
       gain = 20;
@@ -108,7 +102,6 @@ client.on('interactionCreate', async interaction => {
     cookiesData[userId] = newBalance;
     fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookiesData, null, 2));
 
-    // Affiche le résultat
     const resultEmbed = new EmbedBuilder()
       .setTitle('🎰 Résultat de la machine à cookies')
       .setDescription(
@@ -174,10 +167,10 @@ client.on('interactionCreate', async interaction => {
           msg = `✅ Tu peux désormais utiliser **/${item.permission}** !`;
           break;
         case 'mystery':
-          const gain = Math.floor(Math.random()*101);
-          cookies[uid] += gain;
+          const gainMyst = Math.floor(Math.random() * 101);
+          cookies[uid] += gainMyst;
           fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
-          msg = `🎁 Mystery Box : tu obtiens **${gain}** cookies !`;
+          msg = `🎁 Mystery Box : tu obtiens **${gainMyst}** cookies !`;
           break;
         case 'multiplier':
         case 'passive':
@@ -206,16 +199,15 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // 3) Blackjack – boutons “hit_…” et “stay_…”
+  // 4) Blackjack – boutons “hit_…” et “stay_…”
   if (interaction.isButton()) {
     const id = interaction.customId;
 
-    // Tirer une carte
+    // Hit
     if (id.startsWith('hit_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
       const player = rest.slice(0, -2).map(n => parseInt(n));
       const bot = rest.slice(-2).map(n => parseInt(n));
-
       if (interaction.user.id !== userId) {
         return interaction.reply({ content: "❌ Ce n’est pas ta partie.", ephemeral: true });
       }
@@ -233,18 +225,28 @@ client.on('interactionCreate', async interaction => {
       }
 
       const row = new ActionRowBuilder().addComponents(
-        new ButtonBuilder().setCustomId(`hit_${userId}_${mise}_${player.join('_')}_${bot.join('_')}`).setLabel('🃙 Tirer').setStyle(ButtonStyle.Primary),
-        new ButtonBuilder().setCustomId(`stay_${userId}_${mise}_${player.join('_')}_${bot.join('_')}`).setLabel('🛑 Rester').setStyle(ButtonStyle.Secondary)
+        new ButtonBuilder()
+          .setCustomId(`hit_${userId}_${mise}_${player.join('_')}_${bot.join('_')}`)
+          .setLabel('🃙 Tirer')
+          .setStyle(ButtonStyle.Primary),
+        new ButtonBuilder()
+          .setCustomId(`stay_${userId}_${mise}_${player.join('_')}_${bot.join('_')}`)
+          .setLabel('🛑 Rester')
+          .setStyle(ButtonStyle.Secondary)
       );
 
       const embed = new EmbedBuilder()
         .setTitle('🃏 Blackjack')
-        .setDescription(`Tes cartes : **${player.join(', ')}** (total: ${total})\nCartes du bot : **?** et **?**\n🎰 Mise : ${mise}`)
+        .setDescription(
+          `Tes cartes : **${player.join(', ')}** (total: ${total})\n` +
+          `Cartes du bot : **?** et **?**\n🎰 Mise : ${mise}`
+        )
         .setColor('#5865f2');
+
       return interaction.update({ embeds: [embed], components: [row] });
     }
 
-    // Rester
+    // Stay
     if (id.startsWith('stay_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
       const player = rest.slice(0, -2).map(n => parseInt(n));
@@ -257,33 +259,37 @@ client.on('interactionCreate', async interaction => {
       const totalP = player.reduce((a,b) => a + b, 0);
       const totalB = bot.reduce((a,b) => a + b, 0);
       let result = '';
-      let gain = 0;
+      let net = 0;
 
       if (totalP > 21) {
         result = '💥 Tu as dépassé 21. Tu perds.';
+        net = -parseInt(mise, 10);
       } else if (totalB > 21 || totalP > totalB) {
-        result = `🎉 Tu gagnes ${mise * 2} cookies !`;
-        gain = mise * 2;
+        result = `🎉 Tu gagnes ${mise} cookies !`;
+        net = parseInt(mise, 10);
       } else if (totalP === totalB) {
         result = '🤝 Égalité, tu récupères ta mise.';
-        gain = mise;
+        net = 0;
       } else {
-        result = '😢 Le bot a gagné. Tu perds ta mise.';
+        result = `😢 Le bot a gagné. Tu perds ${mise} cookies.`;
+        net = -parseInt(mise, 10);
       }
 
-      // Met à jour le solde
       const cookiesPath = './data/cookies.json';
       const cookies = fs.existsSync(cookiesPath)
-      ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
-      : {};
+        ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
+        : {};
       const current = cookies[userId] ?? 0;
-      cookies[userId] = current + gain;
+      cookies[userId] = current + net;
       fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
 
       const embed = new EmbedBuilder()
         .setTitle('🎲 Résultat du Blackjack')
         .setDescription(
-          `🧍 Toi : ${player.join(', ')} = **${totalP}**\n🤖 Bot : ${bot.join(', ')} = **${totalB}**\n\n${result}`
+          `🧍 Toi : ${player.join(', ')} = **${totalP}**\n` +
+          `🤖 Bot : ${bot.join(', ')} = **${totalB}**\n\n` +
+          `${result}\n\n` +
+          `💰 Solde : **${cookies[userId]}** cookies`
         )
         .setColor('#3333cc');
 
@@ -293,4 +299,3 @@ client.on('interactionCreate', async interaction => {
 });
 
 client.login(process.env.TOKEN);
-
