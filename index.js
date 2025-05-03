@@ -252,34 +252,36 @@ client.on('interactionCreate', async interaction => {
       const player = rest.slice(0, -2).map(n => parseInt(n));
       const bot = rest.slice(-2).map(n => parseInt(n));
 
+      // Le bot tire tant qu'il est < 17
       while (bot.reduce((a,b) => a + b, 0) < 17) {
         bot.push(Math.floor(Math.random() * 10) + 2);
       }
 
       const totalP = player.reduce((a,b) => a + b, 0);
       const totalB = bot.reduce((a,b) => a + b, 0);
+      const bet = parseInt(mise, 10);
       let result = '';
       let net = 0;
 
       if (totalP > 21) {
         result = '💥 Tu as dépassé 21. Tu perds.';
-        net = -parseInt(mise, 10);
+        net = 0; // la mise a déjà été retirée à l'initialisation
       } else if (totalB > 21 || totalP > totalB) {
-        result = `🎉 Tu gagnes ${mise} cookies !`;
-        net = parseInt(mise, 10);
+        result = `🎉 Tu gagnes ${bet} cookies !`;
+        net = bet * 2; // on rend la mise + le gain
       } else if (totalP === totalB) {
         result = '🤝 Égalité, tu récupères ta mise.';
-        net = 0;
+        net = bet; // on rend juste la mise
       } else {
-        result = `😢 Le bot a gagné. Tu perds ${mise} cookies.`;
-        net = -parseInt(mise, 10);
+        result = `😢 Le bot a gagné. Tu perds ${bet} cookies.`;
+        net = 0; // la mise a déjà été retirée
       }
 
       const cookiesPath = './data/cookies.json';
       const cookies = fs.existsSync(cookiesPath)
         ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
         : {};
-      const current = cookies[userId] ?? 0;
+      const current = cookies[userId] ?? 0; // c’est déjà solde - mise
       cookies[userId] = current + net;
       fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
 
