@@ -263,9 +263,11 @@ client.on('interactionCreate', async interaction => {
 
       // Met à jour le solde
       const cookiesPath = './data/cookies.json';
-      const cookies = fs.existsSync(cookiesPath) ? JSON.parse(fs.readFileSync(cookiesPath)) : {};
+      const cookies = fs.existsSync(cookiesPath)
+      ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
+      : {};
       const current = cookies[userId] ?? 0;
-      cookies[userId] = current + (gain - parseInt(mise));
+      cookies[userId] = current + gain;
       fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
 
       const embed = new EmbedBuilder()
