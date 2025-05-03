@@ -1,4 +1,3 @@
-// commands/daily.js
 const { SlashCommandBuilder, EmbedBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -43,15 +42,23 @@ module.exports = {
     // 4) Gestion des power-ups
     const userPus = Array.isArray(powerups[userId]) ? powerups[userId] : [];
 
-    // Filtrer et nettoyer les expirés
+    // Filtrer et supprimer les power-ups expirés
     const validPus = userPus.filter(p => !p.expiresAt || p.expiresAt > now);
     powerups[userId] = validPus;
     fs.writeFileSync(POWERUPS_PATH, JSON.stringify(powerups, null, 2));
 
-    // Appliquer daily_multiplier s’il existe
+    // Appliquer multiplicateur daily s'il existe
     const dailyMul = validPus.find(p => p.id === 'daily_multiplier');
     if (dailyMul) {
       bonus *= 2;
+    }
+
+    // Appliquer bonus passif des fermes (cookie_factory, cookie_farm)
+    const passiveBonus = validPus
+      .filter(p => typeof p.income === 'number')
+      .reduce((sum, p) => sum + p.income, 0);
+    if (passiveBonus > 0) {
+      bonus += passiveBonus;
     }
 
     // 5) Appliquer et sauvegarder
@@ -60,14 +67,15 @@ module.exports = {
     fs.writeFileSync(COOKIES_PATH,  JSON.stringify(cookies, null, 2));
     fs.writeFileSync(COOLDOWN_PATH, JSON.stringify(cooldowns, null, 2));
 
-    // 6) Réponse
+    // 6) Préparer la réponse
+    let description = `Tu as reçu **${bonus} cookies** !`;
+    if (dailyMul) description += `\n(×2 grâce à ton Multiplicateur /daily)`;
+    if (passiveBonus > 0) description += `\n(+ **${passiveBonus}** cookies bonus)`;
+    description += `\n💰 Solde actuel : **${cookies[userId]}** cookies`;
+
     const embed = new EmbedBuilder()
       .setTitle('🎁 Bonus quotidien')
-      .setDescription(
-        `Tu as reçu **${bonus} cookies** !` +
-        (dailyMul ? `\n(×2 grâce à ton **Multiplicateur /daily**)` : '') +
-        `\n💰 Solde actuel : **${cookies[userId]}** cookies`
-      )
+      .setDescription(description)
       .setColor('#FFD700');
 
     await interaction.reply({ embeds: [embed] });

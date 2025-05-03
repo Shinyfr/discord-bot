@@ -180,11 +180,14 @@ client.on('interactionCreate', async interaction => {
           msg = `✅ **${item.name}** ajouté (×${item.multiplier} pendant ${item.durationHours}h, jusqu’à <t:${Math.floor(expiresAt/1000)}:F>) !`;
           break;
 
-        case 'passive':
-          if (!powerups[uid]) powerups[uid] = [];
-          powerups[uid].push({ id: item.id });
-          msg = `✅ **${item.name}** ajouté à tes power-ups !`;
-          break;
+          case 'passive':
+            if (!powerups[uid]) powerups[uid] = [];
+            powerups[uid].push({
+              id: item.id,
+              income: item.income      
+            });
+            msg = `✅ **${item.name}** ajouté à tes power-ups !`;
+            break;
 
         default:
           msg = '✓ Achat effectué !';
