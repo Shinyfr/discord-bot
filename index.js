@@ -84,9 +84,16 @@ client.on('interactionCreate', async interaction => {
     }
 
     // Effectue le spin
-    const emojis = ['🍪','🍫','🍩','💣','🎁'];
-    const spin = () => emojis[Math.floor(Math.random()*emojis.length)];
-    const grid = [spin(), spin(), spin()];
+    const weightedEmojis = [
+      ...Array(11).fill('🍪'),
+      ...Array(2).fill('🍫'),
+      ...Array(2).fill('🍩'),
+      ...Array(2).fill('🎁'),
+      ...Array(3).fill('💣'),
+    ];
+    const spin = () => weightedEmojis[
+      Math.floor(Math.random() * weightedEmojis.length)
+    ];
 
     // Calcule le gain
     let gain = 0;
