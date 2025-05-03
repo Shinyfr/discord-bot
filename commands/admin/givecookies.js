@@ -5,7 +5,7 @@ const path = require('path');
 const COOKIES_PATH = path.join(__dirname, '../../data/cookies.json');
 
 // 👉 Remplace ceci par ton vrai ID Discord
-const AUTHORIZED_IDS = ['123456789012345678'];
+const AUTHORIZED_IDS = ['881571558114590762'];
 
 module.exports = {
   data: new SlashCommandBuilder()
