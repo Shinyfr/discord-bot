@@ -19,9 +19,16 @@ module.exports = {
       console.error('Erreur lecture cookies.json :', error);
     }
 
-    // Trier les joueurs par nombre de cookies
+    // Ajouter des cookies par défaut (20) aux utilisateurs qui n'ont pas encore de cookies enregistrés
+    for (const userId in cookies) {
+      if (cookies[userId] === undefined) {
+        cookies[userId] = 20; // Attribuer 20 cookies par défaut si le solde est inexistant
+      }
+    }
+
+    // Trier les joueurs par nombre de cookies (du plus grand au plus petit)
     const sortedPlayers = Object.entries(cookies)
-      .sort(([, a], [, b]) => b - a) // Tri par nombre de cookies (du plus grand au plus petit)
+      .sort(([, a], [, b]) => b - a) // Tri par nombre de cookies
       .slice(0, 10); // Limiter aux 10 premiers joueurs
 
     // Générer le leaderboard
