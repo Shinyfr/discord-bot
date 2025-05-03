@@ -1,3 +1,4 @@
+// commands/general/shop.js
 const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
@@ -21,11 +22,22 @@ module.exports = {
       return interaction.reply({ content: '📭 La boutique est vide pour le moment.', ephemeral: true });
     }
 
+    // Crée l'embed avec la liste des items
     const embed = new EmbedBuilder()
       .setTitle('🛍️ Boutique CookieBot')
       .setColor('#f5c542')
-      .setDescription('Sélectionne un item dans la liste déroulante pour l’acheter.');
+      .setDescription('Voici les articles disponibles :');
 
+    // Ajoute chaque item en tant que champ
+    for (const item of shop) {
+      embed.addFields({
+        name: `${item.name} — ${item.price} cookies`,
+        value: item.description,
+        inline: false
+      });
+    }
+
+    // Prépare le menu déroulant pour l'achat
     const options = shop.map(item => ({
       label: item.name,
       value: item.id,
@@ -34,7 +46,7 @@ module.exports = {
 
     const menu = new StringSelectMenuBuilder()
       .setCustomId('shop_select')
-      .setPlaceholder('Choisis un item à acheter…')
+      .setPlaceholder('Choisis un article à acheter…')
       .addOptions(options);
 
     const row = new ActionRowBuilder().addComponents(menu);
