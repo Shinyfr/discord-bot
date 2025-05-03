@@ -196,73 +196,89 @@ client.on('interactionCreate', async interaction => {
     }
   }
 
-  // 4) Blackjack – hit_… / stay_…
+  // 3) Blackjack – boutons “hit_…” et “stay_…”
   if (interaction.isButton()) {
     const id = interaction.customId;
 
-    // Hit
+    // Tirer une carte
     if (id.startsWith('hit_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
       const player = rest.slice(0, -2).map(n => parseInt(n));
       const bot = rest.slice(-2).map(n => parseInt(n));
+
       if (interaction.user.id !== userId) {
         return interaction.reply({ content: "❌ Ce n’est pas ta partie.", ephemeral: true });
       }
 
-      const card = Math.floor(Math.random()*10)+2;
+      const card = Math.floor(Math.random() * 10) + 2;
       player.push(card);
-      const total = player.reduce((a,b)=>a+b,0);
+      const total = player.reduce((a,b) => a + b, 0);
 
-      if (total>21) {
+      if (total > 21) {
         const embed = new EmbedBuilder()
           .setTitle('💥 Perdu !')
-          .setDescription(`Tu as tiré **${card}**, dépassement !\nCartes : ${player.join(', ')} (**${total}**)`)
+          .setDescription(`Tu as tiré **${card}** et dépassé 21.\n🃙 Tes cartes : ${player.join(', ')} (total: ${total})`)
           .setColor('#cc0000');
-        return interaction.update({ embeds:[embed], components:[] });
+        return interaction.update({ embeds: [embed], components: [] });
       }
 
       const row = new ActionRowBuilder().addComponents(
         new ButtonBuilder().setCustomId(`hit_${userId}_${mise}_${player.join('_')}_${bot.join('_')}`).setLabel('🃙 Tirer').setStyle(ButtonStyle.Primary),
         new ButtonBuilder().setCustomId(`stay_${userId}_${mise}_${player.join('_')}_${bot.join('_')}`).setLabel('🛑 Rester').setStyle(ButtonStyle.Secondary)
       );
+
       const embed = new EmbedBuilder()
         .setTitle('🃏 Blackjack')
-        .setDescription(`Cartes : ${player.join(', ')} (**${total}**)\nBot : ? et ?\nMise : ${mise}`)
+        .setDescription(`Tes cartes : **${player.join(', ')}** (total: ${total})\nCartes du bot : **?** et **?**\n🎰 Mise : ${mise}`)
         .setColor('#5865f2');
-      return interaction.update({ embeds:[embed], components:[row] });
+      return interaction.update({ embeds: [embed], components: [row] });
     }
 
-    // Stay
+    // Rester
     if (id.startsWith('stay_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
-      const player = rest.slice(0, -2).map(n=>parseInt(n));
-      const bot = rest.slice(-2).map(n=>parseInt(n));
-      while (bot.reduce((a,b)=>a+b,0)<17) {
-        bot.push(Math.floor(Math.random()*10)+2);
-      }
-      const totalP = player.reduce((a,b)=>a+b,0);
-      const totalB = bot.reduce((a,b)=>a+b,0);
-      let result='', gain=0;
-      if (totalP>21) result='💥 Tu as dépassé 21. Tu perds.';
-      else if (totalB>21||totalP>totalB) { result=`🎉 Tu gagnes ${mise*2} cookies !`; gain=mise*2; }
-      else if (totalP===totalB) { result='🤝 Égalité, tu récupères ta mise.'; gain=mise; }
-      else result='😢 Le bot a gagné. Tu perds la mise.';
+      const player = rest.slice(0, -2).map(n => parseInt(n));
+      const bot = rest.slice(-2).map(n => parseInt(n));
 
-      const cookiesData = fs.existsSync(COOKIES_PATH)
-        ? JSON.parse(fs.readFileSync(COOKIES_PATH,'utf-8'))
-        : {};
-      const cur = cookiesData[userId] ?? 0;
-      cookiesData[userId] = cur + (gain - parseInt(mise));
-      fs.writeFileSync(COOKIES_PATH, JSON.stringify(cookiesData,null,2));
+      while (bot.reduce((a,b) => a + b, 0) < 17) {
+        bot.push(Math.floor(Math.random() * 10) + 2);
+      }
+
+      const totalP = player.reduce((a,b) => a + b, 0);
+      const totalB = bot.reduce((a,b) => a + b, 0);
+      let result = '';
+      let gain = 0;
+
+      if (totalP > 21) {
+        result = '💥 Tu as dépassé 21. Tu perds.';
+      } else if (totalB > 21 || totalP > totalB) {
+        result = `🎉 Tu gagnes ${mise * 2} cookies !`;
+        gain = mise * 2;
+      } else if (totalP === totalB) {
+        result = '🤝 Égalité, tu récupères ta mise.';
+        gain = mise;
+      } else {
+        result = '😢 Le bot a gagné. Tu perds ta mise.';
+      }
+
+      // Met à jour le solde
+      const cookiesPath = './data/cookies.json';
+      const cookies = fs.existsSync(cookiesPath) ? JSON.parse(fs.readFileSync(cookiesPath)) : {};
+      const current = cookies[userId] ?? 0;
+      cookies[userId] = current + (gain - parseInt(mise));
+      fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
 
       const embed = new EmbedBuilder()
         .setTitle('🎲 Résultat du Blackjack')
-        .setDescription(`Toi : ${player.join(', ')} = **${totalP}**\nBot : ${bot.join(', ')} = **${totalB}**\n\n${result}`)
+        .setDescription(
+          `🧍 Toi : ${player.join(', ')} = **${totalP}**\n🤖 Bot : ${bot.join(', ')} = **${totalB}**\n\n${result}`
+        )
         .setColor('#3333cc');
 
-      return interaction.update({ embeds:[embed], components:[] });
+      return interaction.update({ embeds: [embed], components: [] });
     }
   }
 });
 
 client.login(process.env.TOKEN);
+
