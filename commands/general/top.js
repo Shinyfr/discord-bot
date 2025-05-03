@@ -42,7 +42,6 @@ module.exports = {
       .setTitle('🍪 Top 10 des meilleurs joueurs')
       .setDescription(leaderboard || 'Il n\'y a pas encore de données.')
       .setColor('#f5c542')
-      .setFooter({ text: `Commandé par ${interaction.user.username}`, iconURL: interaction.user.displayAvatarURL() });
 
     await interaction.reply({ embeds: [embed] });
   },
