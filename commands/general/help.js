@@ -20,20 +20,20 @@ module.exports = {
           value: `Affiche ton solde actuel de cookies.`,
         },
         {
-          name: '📅 /daily (à venir)',
+          name: '📅 /daily',
           value: `Réclame un bonus de cookies chaque jour.`,
         },
         {
-          name: '🛍️ /shop et /buy (à venir)',
+          name: '🛍️ /shop',
           value: `Découvre des objets à acheter avec tes cookies.`,
         },
         {
-          name: '🃏 /blackjack (à venir)',
+          name: '🃏 /blackjack',
           value: `Joue au blackjack contre le bot !`,
         }
       )
       .setFooter({
-        text: `Version bêta - d'autres mini-jeux arrivent !`,
+        text: `Amusez vous bien !`,
         iconURL: interaction.client.user.displayAvatarURL()
       });
 
