@@ -17,6 +17,18 @@ const path = require('path');
 const COOKIE_COST = 5;
 const COOKIES_PATH = path.join(__dirname, 'data/cookies.json');
 
+// Calcule le total d'une main en gérant les As (11 ou 1)
+function getHandValue(cards) {
+  let total = cards.reduce((sum, v) => sum + v, 0);
+  let aces = cards.filter(v => v === 11).length;
+  // Tant que ça bust et qu'il y a un As, on revalorise un As à 1 (-10)
+  while (total > 21 && aces > 0) {
+    total -= 10;
+    aces--;
+  }
+  return total;
+}
+
 const client = new Client({
   intents: [
     GatewayIntentBits.Guilds,
@@ -81,7 +93,7 @@ client.on('interactionCreate', async interaction => {
       return interaction.reply({ content: '❌ Pas assez de cookies pour jouer !', ephemeral: true });
     }
 
-    // Tirage pondéré pour 1/6 de chance de triple 🍪
+    // Tirage pondéré
     const weightedEmojis = [
       ...Array(11).fill('🍪'),
       ...Array(2).fill('🍫'),
@@ -206,20 +218,23 @@ client.on('interactionCreate', async interaction => {
     // Hit
     if (id.startsWith('hit_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
-      const player = rest.slice(0, -2).map(n => parseInt(n));
-      const bot = rest.slice(-2).map(n => parseInt(n));
+      const player = rest.slice(0, -2).map(n => parseInt(n, 10));
+      const bot    = rest.slice(-2).map(n => parseInt(n, 10));
       if (interaction.user.id !== userId) {
         return interaction.reply({ content: "❌ Ce n’est pas ta partie.", ephemeral: true });
       }
 
       const card = Math.floor(Math.random() * 10) + 2;
       player.push(card);
-      const total = player.reduce((a,b) => a + b, 0);
+      const total = getHandValue(player);
 
       if (total > 21) {
         const embed = new EmbedBuilder()
           .setTitle('💥 Perdu !')
-          .setDescription(`Tu as tiré **${card}** et dépassé 21.\n🃙 Tes cartes : ${player.join(', ')} (total: ${total})`)
+          .setDescription(
+            `Tu as tiré **${card}**.\n` +
+            `🃙 Tes cartes : ${player.join(', ')} (total: ${total})`
+          )
           .setColor('#cc0000');
         return interaction.update({ embeds: [embed], components: [] });
       }
@@ -239,7 +254,8 @@ client.on('interactionCreate', async interaction => {
         .setTitle('🃏 Blackjack')
         .setDescription(
           `Tes cartes : **${player.join(', ')}** (total: ${total})\n` +
-          `Cartes du bot : **?** et **?**\n🎰 Mise : ${mise}`
+          `Cartes du bot : **?** et **?**\n` +
+          `🎰 Mise : ${mise} cookies`
         )
         .setColor('#5865f2');
 
@@ -249,39 +265,38 @@ client.on('interactionCreate', async interaction => {
     // Stay
     if (id.startsWith('stay_')) {
       const [ , userId, mise, ...rest ] = id.split('_');
-      const player = rest.slice(0, -2).map(n => parseInt(n));
-      const bot = rest.slice(-2).map(n => parseInt(n));
+      const player = rest.slice(0, -2).map(n => parseInt(n, 10));
+      const bot    = rest.slice(-2).map(n => parseInt(n, 10));
 
-      // Le bot tire tant qu'il est < 17
-      while (bot.reduce((a,b) => a + b, 0) < 17) {
+      while (getHandValue(bot) < 17) {
         bot.push(Math.floor(Math.random() * 10) + 2);
       }
 
-      const totalP = player.reduce((a,b) => a + b, 0);
-      const totalB = bot.reduce((a,b) => a + b, 0);
-      const bet = parseInt(mise, 10);
+      const totalP = getHandValue(player);
+      const totalB = getHandValue(bot);
+      const bet    = parseInt(mise, 10);
       let result = '';
-      let net = 0;
+      let net    = 0;
 
       if (totalP > 21) {
         result = '💥 Tu as dépassé 21. Tu perds.';
-        net = 0; // la mise a déjà été retirée à l'initialisation
+        net = 0;
       } else if (totalB > 21 || totalP > totalB) {
         result = `🎉 Tu gagnes ${bet} cookies !`;
-        net = bet * 2; // on rend la mise + le gain
+        net = bet * 2;
       } else if (totalP === totalB) {
         result = '🤝 Égalité, tu récupères ta mise.';
-        net = bet; // on rend juste la mise
+        net = bet;
       } else {
         result = `😢 Le bot a gagné. Tu perds ${bet} cookies.`;
-        net = 0; // la mise a déjà été retirée
+        net = 0;
       }
 
       const cookiesPath = './data/cookies.json';
       const cookies = fs.existsSync(cookiesPath)
         ? JSON.parse(fs.readFileSync(cookiesPath, 'utf-8'))
         : {};
-      const current = cookies[userId] ?? 0; // c’est déjà solde - mise
+      const current = cookies[userId] ?? 0; // déjà solde - mise
       cookies[userId] = current + net;
       fs.writeFileSync(cookiesPath, JSON.stringify(cookies, null, 2));
 
