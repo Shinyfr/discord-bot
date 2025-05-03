@@ -77,6 +77,15 @@ client.on('interactionCreate', async interaction => {
       let resultat = '';
       let gain = 0;
     
+      const cookies = JSON.parse(fs.readFileSync('./data/cookies.json'));
+      const current = cookies[userId] ?? 0;
+    
+      // Vérification si le joueur a assez de cookies pour la mise
+      if (current < mise) {
+        return interaction.update({ content: "❌ Tu n'as pas assez de cookies pour cette mise !", components: [] });
+      }
+    
+      // Calcul du résultat du jeu
       if (totalJoueur > 21) {
         resultat = '💥 Tu as dépassé 21. Tu perds.';
         gain = 0;
@@ -91,9 +100,7 @@ client.on('interactionCreate', async interaction => {
         gain = 0;
       }
     
-      const cookies = JSON.parse(fs.readFileSync('./data/cookies.json'));
-      const current = cookies[userId] ?? 0;
-      cookies[userId] = current + (gain - mise); // 🔧 corrige le surplus
+      cookies[userId] = current + (gain - mise); // Calcul du solde
       fs.writeFileSync('./data/cookies.json', JSON.stringify(cookies, null, 2));
     
       const embed = new EmbedBuilder()
