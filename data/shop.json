@@ -26,7 +26,7 @@
     "id": "mystery_box",
     "name": "Mystery Box",
     "description": "Boîte mystère contenant 0–100 cookies aléatoires",
-    "price": 80,
+    "price": 35,
     "type": "mystery"
   },
   {
@@ -42,7 +42,7 @@
     "id": "cookie_factory",
     "name": "Cookie Factory",
     "description": "+5 cookies/jour",
-    "price": 300,
+    "price": 80,
     "type": "passive",
     "income": 5
   },
