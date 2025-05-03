@@ -1,0 +1,57 @@
+[
+  {
+    "id": "cookie_lover",
+    "name": "Cookie Lover",
+    "description": "Rôle coloré “Cookie Lover”",
+    "price": 500,
+    "type": "role",
+    "roleId": "1368206744605556857"
+  },
+  {
+    "id": "exclusive_emoji",
+    "name": "Emoji Exclusif",
+    "description": "Ajoute un emoji exclusif sur le serveur",
+    "price": 200,
+    "type": "emoji"
+  },
+  {
+    "id": "magic_cookie",
+    "name": "Accès à /magiccookie",
+    "description": "Donne le droit d’utiliser la commande magique",
+    "price": 30,
+    "type": "permission",
+    "permission": "magiccookie"
+  },
+  {
+    "id": "mystery_box",
+    "name": "Mystery Box",
+    "description": "Boîte mystère contenant 0–100 cookies aléatoires",
+    "price": 80,
+    "type": "mystery"
+  },
+  {
+    "id": "daily_multiplier",
+    "name": "Multiplicateur /daily",
+    "description": "Double ton gain quotidien pendant 24 h",
+    "price": 100,
+    "type": "multiplier",
+    "multiplier": 2,
+    "durationHours": 24
+  },
+  {
+    "id": "cookie_factory",
+    "name": "Cookie Factory",
+    "description": "+5 cookies/jour",
+    "price": 300,
+    "type": "passive",
+    "income": 5
+  },
+  {
+    "id": "cookie_farm",
+    "name": "Cookie Farm",
+    "description": "+1 cookie/jour",
+    "price": 50,
+    "type": "passive",
+    "income": 1
+  }
+]
