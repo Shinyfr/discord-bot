@@ -1,4 +1,4 @@
-const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, ButtonBuilder, ButtonStyle } = require('discord.js');
+const { SlashCommandBuilder, EmbedBuilder, ActionRowBuilder, StringSelectMenuBuilder } = require('discord.js');
 const fs = require('fs');
 const path = require('path');
 
@@ -10,32 +10,35 @@ module.exports = {
     .setDescription('🛍️ Affiche la boutique de CookieBot'),
 
   async execute(interaction) {
-    const shop = JSON.parse(fs.readFileSync(SHOP_PATH));
+    let shop;
+    try {
+      shop = JSON.parse(fs.readFileSync(SHOP_PATH, 'utf-8'));
+    } catch (err) {
+      console.error('Erreur lecture shop.json:', err);
+      return interaction.reply({ content: '❌ Impossible de charger la boutique.', ephemeral: true });
+    }
+    if (!Array.isArray(shop) || shop.length === 0) {
+      return interaction.reply({ content: '📭 La boutique est vide pour le moment.', ephemeral: true });
+    }
+
     const embed = new EmbedBuilder()
       .setTitle('🛍️ Boutique CookieBot')
       .setColor('#f5c542')
-      .setDescription('Clique sur un bouton pour acheter.');
+      .setDescription('Sélectionne un item dans la liste déroulante pour l’acheter.');
 
-    const rows = [];
-    for (let i = 0; i < shop.length; i += 5) {
-      const slice = shop.slice(i, i + 5);
-      const row = new ActionRowBuilder();
-      slice.forEach(item => {
-        embed.addFields({
-          name: `${item.name} — ${item.price} cookies`,
-          value: item.description,
-          inline: false
-        });
-        row.addComponents(
-          new ButtonBuilder()
-            .setCustomId(`buy_${item.id}`)
-            .setLabel(item.name)
-            .setStyle(ButtonStyle.Primary)
-        );
-      });
-      rows.push(row);
-    }
+    const options = shop.map(item => ({
+      label: item.name,
+      value: item.id,
+      description: `${item.price} cookies`
+    }));
 
-    await interaction.reply({ embeds: [embed], components: rows });
+    const menu = new StringSelectMenuBuilder()
+      .setCustomId('shop_select')
+      .setPlaceholder('Choisis un item à acheter…')
+      .addOptions(options);
+
+    const row = new ActionRowBuilder().addComponents(menu);
+
+    await interaction.reply({ embeds: [embed], components: [row] });
   },
 };
