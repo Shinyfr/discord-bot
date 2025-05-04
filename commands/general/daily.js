@@ -33,7 +33,7 @@ module.exports = {
     //    (sauf pour l'utilisateur de test qui bypass le cooldown)
     if (userId !== TEST_USER_ID && lastClaim > startOfToday.getTime()) {
       return interaction.reply({
-        content: `⏳ Tu as déjà récupéré ton bonus aujourd'hui. Réessaie demain à minuit !`,
+        content: `⏳ Tu as déjà récupéré ton bonus aujourd'hui. Réessaie demain !`,
         ephemeral: true
       });
     }
