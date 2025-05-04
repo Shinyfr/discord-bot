@@ -4,7 +4,6 @@ const path = require('path');
 
 const COOKIES_PATH   = path.join(__dirname, '../../data/cookies.json');
 const COOLDOWN_PATH  = path.join(__dirname, '../../data/cooldowns.json');
-const COOLDOWN_HOURS = 24;
 
 // Remplace par ton ID Discord pour ignorer le cooldown lors des tests
 const TEST_USER_ID = '';
@@ -25,14 +24,16 @@ module.exports = {
 
     const now = Date.now();
     let lastClaim = cooldowns[userId] ?? 0;
-    if (userId === TEST_USER_ID) lastClaim = 0;
-    const hoursDiff = (now - lastClaim) / 3_600_000;
 
-    // 2) Vérifier le cooldown (sauf pour l'utilisateur de test)
-    if (userId !== TEST_USER_ID && hoursDiff < COOLDOWN_HOURS) {
-      const rem = Math.ceil(COOLDOWN_HOURS - hoursDiff);
+    // Calcul du début de la journée courante (00:00:00)
+    const startOfToday = new Date();
+    startOfToday.setHours(0, 0, 0, 0);
+
+    // 2) Vérifier si l'utilisateur a déjà réclamé aujourd'hui
+    //    (sauf pour l'utilisateur de test qui bypass le cooldown)
+    if (userId !== TEST_USER_ID && lastClaim > startOfToday.getTime()) {
       return interaction.reply({
-        content: `⏳ Tu as déjà récupéré ton bonus aujourd'hui.\nRéessaie dans **${rem}h**.`,
+        content: `⏳ Tu as déjà récupéré ton bonus aujourd'hui. Réessaie demain à minuit !`,
         ephemeral: true
       });
     }
